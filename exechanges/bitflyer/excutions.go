@@ -63,14 +63,6 @@ func (p *Bitflyer) Set(isUpper bool, x interface{}) (midPrice float64, err error
 	return midPrice, nil
 }
 
-func (p *Bitflyer) LTP(price float64) float64 {
-	return price
-}
-
-func (p *Bitflyer) Volume(vol float64) float64 {
-	return vol
-}
-
 func (p *Bitflyer) ProspectBandwidth(hasAvgPrice, size float64) (mid, ranges float64) {
 	if p.Upper.At(0, 0) == p.Lower.At(0, 0) || // 必要なデータが無ければreturn
 		p.Upper.At(0, 0) < p.Lower.At(0, 0) || // 下値が上値より高い場合はreturn

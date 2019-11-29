@@ -6,9 +6,6 @@ import "math"
 type Exchange interface {
 	Set(x interface{}) error
 
-	LTP(price float64) float64
-	Volume(vol float64) float64
-
 	// ProspectBandwidth is predict(invers) price and price range band.
 	ProspectBandwidth(avgPrice, size float64) (mid, ranges float64)
 
