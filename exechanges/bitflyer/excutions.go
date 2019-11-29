@@ -72,6 +72,12 @@ func (p *Bitflyer) Volume(vol float64) float64 {
 }
 
 func (p *Bitflyer) ProspectBandwidth(hasAvgPrice, size float64) (mid, ranges float64) {
+	if p.Upper.At(0, 0) == p.Lower.At(0, 0) || // 必要なデータが無ければreturn
+		p.Upper.At(0, 0) < p.Lower.At(0, 0) || // 下値が上値より高い場合はreturn
+		0 == p.Lower.At(0, 0) { // 下値が0値の場合はreturn
+		return mid, ranges
+	}
+
 	// 上下不利約定の出来高加重平均を取る
 	prices := append(p.Upper.RawRowView(0), p.Lower.RawRowView(0)...)
 	volumes := append(p.Upper.RawRowView(1), p.Lower.RawRowView(1)...)
@@ -90,6 +96,9 @@ func (p *Bitflyer) ProspectBandwidth(hasAvgPrice, size float64) (mid, ranges flo
 	// diffCenterPrice := math.Abs(upper or lower - mid)
 	// bins :=
 
+	// 中央価格前後で利確
+	// TODO:
+	// 予想到達価格帯を返し、その価格範囲で建玉処分を出力
 	return mid, 0
 }
 
