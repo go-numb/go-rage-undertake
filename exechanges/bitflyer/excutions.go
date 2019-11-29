@@ -2,7 +2,6 @@ package bitflyer
 
 import (
 	"errors"
-	"math"
 	"strings"
 
 	"gonum.org/v1/gonum/mat"
@@ -34,28 +33,31 @@ func NewBitlyer(lev int) *Bitflyer {
 }
 
 // Set guide price by rekt liquidation order
-func (p *Bitflyer) Set(isRektBuySide bool, x interface{}) (midPrice float64, err error) {
+// 不利（強制精算）出来高を積み立てる
+func (p *Bitflyer) Set(isUpper bool, x interface{}) (midPrice float64, err error) {
 	data, ok := x.(executions.Execution)
 	if !ok {
 		return midPrice, errors.New("does not use data")
 	}
 
-	if !isRektBuySide { // 上昇により売り建玉の精算が発生
+	if isUpper { // 上昇により売り建玉の精算が発生
 		lowerPrice := data.Price * float64(p.Leverage-1) / float64(p.Leverage)
 		midPrice = stat.Mean([]float64{data.Price, lowerPrice}, nil)
 
-		r, _ := p.Upper.Dims()
-		p.Upper.SetRow(r+1, []float64{data.Price, data.Size})
-		r, _ = p.Lower.Dims()
-		p.Lower.SetRow(r+1, []float64{lowerPrice, 0})
+		add := mat.NewDense(1, 3, []float64{data.Price, data.Size, 0})
+		r, c := p.Upper.Dims()
+		stack := mat.NewDense(r+1, c, nil)
+		stack.Stack(p.Upper, add)
+		p.Upper = stack
 	} else { // 下落により買い建玉の精算が発生
 		upperPrice := data.Price * float64(p.Leverage+1) / float64(p.Leverage)
 		midPrice = stat.Mean([]float64{data.Price, upperPrice}, nil)
 
-		r, _ := p.Upper.Dims()
-		p.Upper.SetRow(r+1, []float64{upperPrice, 0, 0})
-		r, _ = p.Lower.Dims()
-		p.Lower.SetRow(r+1, []float64{data.Price, data.Size, 0})
+		add := mat.NewDense(1, 3, []float64{data.Price, data.Size, 0})
+		r, c := p.Lower.Dims()
+		stack := mat.NewDense(r+1, c, nil)
+		stack.Stack(p.Lower, add)
+		p.Lower = stack
 	}
 
 	return midPrice, nil
@@ -69,15 +71,24 @@ func (p *Bitflyer) Volume(vol float64) float64 {
 	return vol
 }
 
-func (p *Bitflyer) ProspectBandwidth(avgPrice, size float64) (mid, ranges float64) {
-	// p.Upper.
-	mid = p.Upper.At(1, 0)
-	diff := math.Abs(avgPrice - mid)
+func (p *Bitflyer) ProspectBandwidth(hasAvgPrice, size float64) (mid, ranges float64) {
+	// 上下不利約定の出来高加重平均を取る
+	prices := append(p.Upper.RawRowView(0), p.Lower.RawRowView(0)...)
+	volumes := append(p.Upper.RawRowView(1), p.Lower.RawRowView(1)...)
+
+	// Denseの構造上、lengthが違うことはありえない
+	// 便宜上のchecks length
+	if len(prices) != len(volumes) {
+		return mid, ranges
+	}
+
+	mid = stat.Mean(prices, volumes)
+
+	// TODO:
 	// 段階的な建玉の処分
 	// 建玉から最適段階と配分を求める
-	// bins := diff
-
-	_ = diff
+	// diffCenterPrice := math.Abs(upper or lower - mid)
+	// bins :=
 
 	return mid, 0
 }
