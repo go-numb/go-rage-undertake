@@ -7,16 +7,16 @@ Use with my package for diff exchanges price
 
 # Usage 
 ``` golang
-
 package main
 
 import (
-    "github.com/go-numb/go-rage-undertake/liquidation"
 	"fmt"
 	"math"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/go-numb/go-rage-undertake/liquidation"
 )
 
 func TestUse(t *testing.T) {
@@ -48,20 +48,29 @@ func TestUse(t *testing.T) {
 		liq.Set(prices, volumes)
 	}
 
-    // Setした価格と出来高から算出した中央価格
+	// Setした価格と出来高から算出した中央価格
 	mean := liq.MA.Avg()
 
 	// 頻出するLiquidation上下価格などから、刈り取られやすいレバレッジを見込む
-    // もしくは、取引所単位や商品などで選択する
-    var leverage float64 = 15
-        
+	// もしくは、取引所単位や商品などで選択する
+	var leverage float64 = 15
+
 	// 算出価格は、中央価格帯で蓄積した出来高がleverageで構築され、証拠金50%になったとき精算される価格とした
 	// TODO: 証拠金割合も引数で調整可能にする予定
-	buy, sell := liq.LiquidationPrice(leverage)
+
+	/*
+		# cut ratio (ex.
+			- cutRatio := 0.0 // (Margin or Collateral) Zero cut Exchange
+			- cutRatio := 0.5 // (Margin or Collateral) 50% cut Exchange
+			- cutRatio := 0.75 // (Margin or Collateral) 75% cut Exchange
+	*/
+	cutRatio := 0.0 // (Margin or Collateral) Zero cut Exchange
+	buy, sell := liq.LiquidationPrice(leverage, cutRatio)
 	fmt.Printf("BidPrice: %.2f AskPrice: %.2f\n", buy, sell)
 	fmt.Printf("CenterPrice: %.2f, BothSideDiff: %.2f/%.2f\n", mean, sell-mean, mean-buy)
 
 }
+
 
 ```
 
